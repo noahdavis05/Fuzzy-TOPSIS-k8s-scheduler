@@ -9,6 +9,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"scheduler/pkg/scheduler"
 )
 
 func main() {
@@ -42,10 +44,14 @@ func main() {
 	)
 
 	// make a pod informer with factory
-	informer := factory.Core().V1().Pods().Informer()
+	podInformer := factory.Core().V1().Pods().Informer()
+	nodeInformer := factory.Core().V1().Nodes()
+
+	// make a node Lister
+	nodeLister := nodeInformer.Lister()
 
 	// add event handlers to the informer
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			// pod is currently a generic object so convert it into
 			// actual Pod type
@@ -53,6 +59,7 @@ func main() {
 
 			if pod.Spec.NodeName == "" && pod.Spec.SchedulerName == "topsis-scheduler" {
 				fmt.Println("Unscheduled pod detected")
+				scheduler.SchedulePod(client, pod, nodeLister)
 			}
 		},
 	})
@@ -60,7 +67,7 @@ func main() {
 	// create stop channel and start informer
 	stopCh := make(chan struct{})
 	factory.Start(stopCh)
-	cache.WaitForCacheSync(stopCh, informer.HasSynced)
+	cache.WaitForCacheSync(stopCh, podInformer.HasSynced)
 	fmt.Println("Informer has started")
 	<-stopCh // keeps program running indefinitely
 
