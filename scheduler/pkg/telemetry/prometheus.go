@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"scheduler/pkg/config"
 	"scheduler/pkg/types"
@@ -72,8 +71,8 @@ func RefreshTelemetryCache(nodes []*v1.Node) {
 	}
 	refreshedData = finalData
 
-	jsonData, _ := json.MarshalIndent(refreshedData, "", "  ")
-	fmt.Println(string(jsonData))
+	//jsonData, _ := json.MarshalIndent(refreshedData, "", "  ")
+	//fmt.Println(string(jsonData))
 	UpdateCache(refreshedData)
 }
 

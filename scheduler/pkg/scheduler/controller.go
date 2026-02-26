@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"scheduler/pkg/algorithm"
 	"scheduler/pkg/telemetry"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,6 +22,10 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 
 	fmt.Println("Loading telemetry data")
 	telemetry.RefreshTelemetryCache(nodes)
+
+	// create fuzzy decision matrix and print in terminal for debugging
+	fuzzyDM := algorithm.BuildFuzzyDM(nodes)
+	algorithm.DisplayFuzzyDM(fuzzyDM)
 
 	selectedNode := nodes[2]
 
