@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"scheduler/pkg/scheduler"
+	"scheduler/pkg/telemetry"
 )
 
 func main() {
@@ -64,11 +68,34 @@ func main() {
 		},
 	})
 
-	// create stop channel and start informer
+	// create stop channel
 	stopCh := make(chan struct{})
+
+	// create a channel to handle shutdown signals
+	// this is used to gracefully stop all goroutines
+	sigCh := make(chan os.Signal, 1)
+
+	signal.Notify(
+		sigCh,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+
+	// function to recieve shutdown signal and stop the stopChannel
+	// this will stop subroutines using stopChannel and avoid
+	// goroutine leaks
+	go func() {
+		sig := <-sigCh
+		fmt.Println("Shutdown signal received:", sig)
+		close(stopCh)
+	}()
+
+	// start informer
 	factory.Start(stopCh)
-	cache.WaitForCacheSync(stopCh, podInformer.HasSynced)
+	cache.WaitForCacheSync(stopCh, podInformer.HasSynced, nodeInformer.Informer().HasSynced)
 	fmt.Println("Informer has started")
+	// start the telemetry refresher in the background
+	go telemetry.AutoRefreshTelemetryCache(stopCh, 10*time.Second, nodeLister)
 	<-stopCh // keeps program running indefinitely
 
 }
