@@ -1,9 +1,9 @@
 package types
 
 type TelemetryMetric struct {
-	Low  float32
-	Mean float32
-	High float32
+	Low  float64
+	Mean float64
+	High float64
 }
 
 type NodeTelemetryMetrics struct {

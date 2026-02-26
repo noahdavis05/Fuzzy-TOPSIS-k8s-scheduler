@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"scheduler/pkg/config"
 	"scheduler/pkg/types"
@@ -16,6 +17,12 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
+
+type telemetryQuery struct {
+	Query      string
+	MetricType string // "CPU" or "RAM"
+	Stat       string // "Low", "Mean", "High"
+}
 
 func AutoRefreshTelemetryCache(stopCh <-chan struct{}, interval time.Duration, nodeLister v1listers.NodeLister) {
 	ticker := time.NewTicker(interval)
@@ -39,8 +46,6 @@ func AutoRefreshTelemetryCache(stopCh <-chan struct{}, interval time.Duration, n
 }
 
 func RefreshTelemetryCache(nodes []*v1.Node) {
-	// new data which will replace current cache
-	refreshedData := make(map[string]types.NodeTelemetryMetrics)
 
 	// make a prometheus client which we can make API calls with
 	prometheusClient, err := api.NewClient(api.Config{
@@ -52,70 +57,88 @@ func RefreshTelemetryCache(nodes []*v1.Node) {
 
 	promApi := promv1.NewAPI(prometheusClient)
 
-	resultCPU, resultRAM := requestNodeTelemetry(promApi)
+	refreshedData := requestNodeTelemetry(promApi)
 
-	cpuVector := resultCPU.(model.Vector)
-	ramVector := resultRAM.(model.Vector)
-
-	// map the IPs in the results to actual NodeNames and build
-	// refreshed cache map
-
-	// TODO - Can make more efficient
+	// the keys are currently the IP adresses of nodes
+	// change these back to node.Name
+	finalData := make(map[string]types.NodeTelemetryMetrics)
 	for _, node := range nodes {
-		nodeIP := getNodeAddress(node)
-
-		// now check the cpu and ram and get
-		var cpuVal, ramVal float64
-
-		for _, sample := range cpuVector {
-			instance := string(sample.Metric["instance"])
-			ip := strings.Split(instance, ":")[0]
-			if ip == nodeIP {
-				cpuVal = float64(sample.Value)
-				break
+		ip := getNodeAddress(node)
+		if ip != "" {
+			if metrics, exists := refreshedData[ip]; exists {
+				finalData[node.Name] = metrics
 			}
-		}
-
-		// Find RAM value
-		for _, sample := range ramVector {
-			instance := string(sample.Metric["instance"])
-			ip := strings.Split(instance, ":")[0]
-			if ip == nodeIP {
-				ramVal = float64(sample.Value)
-				break
-			}
-		}
-
-		refreshedData[node.Name] = types.NodeTelemetryMetrics{
-			CPU: types.TelemetryMetric{
-				Low:  0,
-				Mean: float32(cpuVal),
-				High: 0,
-			},
-			RAM: types.TelemetryMetric{
-				Low:  0,
-				Mean: float32(ramVal),
-				High: 0,
-			},
 		}
 	}
-	fmt.Printf("Refreshed telemetry data: %+v\n", refreshedData)
+	refreshedData = finalData
+
+	jsonData, _ := json.MarshalIndent(refreshedData, "", "  ")
+	fmt.Println(string(jsonData))
 	UpdateCache(refreshedData)
 }
 
-func requestNodeTelemetry(promApi promv1.API) (model.Value, model.Value) {
-	query := `sum by (instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m]))`
+func requestNodeTelemetry(promApi promv1.API) map[string]types.NodeTelemetryMetrics {
+	queries := []telemetryQuery{
+		{`avg by (instance) (100 - (rate(node_cpu_seconds_total{mode="idle"}[5m]) * 100))`, "CPU", "Mean"},
+		{`min_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100))[5m:15s])`, "CPU", "Low"},
+		{`max_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100))[5m:15s])`, "CPU", "High"},
+		{`avg_over_time((100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)))[5m:1m])`, "RAM", "Mean"},
+		{`min_over_time((100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)))[5m:1m])`, "RAM", "Low"},
+		{`max_over_time((100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)))[5m:1m])`, "RAM", "High"},
+	}
 
-	resultCPU := makePromRequest(promApi, query)
+	// make a results map
+	refreshedData := map[string]types.NodeTelemetryMetrics{}
 
-	query = `sum by (instance) (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)`
+	// iterate over queries and add them into a result
+	for _, query := range queries {
+		result := makePromRequest(promApi, query.Query)
 
-	resultRAM := makePromRequest(promApi, query)
+		resVector := result.(model.Vector)
+		// iterate over the resultVector
+		for _, sample := range resVector {
+			// we will use the ip address as the key
+			instance := string(sample.Metric["instance"])
+			ip := strings.Split(instance, ":")[0]
+
+			value := sample.Value
+
+			// check if key exists for this IP, if not make it
+			if _, exists := refreshedData[ip]; !exists {
+				refreshedData[ip] = types.NodeTelemetryMetrics{}
+			}
+
+			metrics := refreshedData[ip]
+
+			// now add the values
+			switch query.MetricType {
+			case "CPU":
+				switch query.Stat {
+				case "Mean":
+					metrics.CPU.Mean = float64(value)
+				case "Low":
+					metrics.CPU.Low = float64(value)
+				case "High":
+					metrics.CPU.High = float64(value)
+				}
+			case "RAM":
+				switch query.Stat {
+				case "Mean":
+					metrics.RAM.Mean = float64(value)
+				case "Low":
+					metrics.RAM.Low = float64(value)
+				case "High":
+					metrics.RAM.High = float64(value)
+				}
+			}
+			refreshedData[ip] = metrics
+		}
+	}
 
 	//fmt.Printf("Query result: %v\n", resultCPU)
 	//fmt.Printf("Query result: %v\n", resultRAM)
 
-	return resultCPU, resultRAM
+	return refreshedData
 }
 
 func makePromRequest(promAPI promv1.API, query string) model.Value {
