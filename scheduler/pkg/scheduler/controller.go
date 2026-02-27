@@ -27,6 +27,9 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 	fuzzyDM := algorithm.BuildFuzzyDM(nodes)
 	algorithm.DisplayFuzzyDM(fuzzyDM)
 
+	// run the selection
+	_ = algorithm.SelectNode(fuzzyDM)
+
 	selectedNode := nodes[2]
 
 	// get the telemetry data from this node
