@@ -35,3 +35,8 @@ type FuzzyDecisionMatrix struct {
 	// a list of our columns. E.g. CPU and RAM
 	Criteria []string
 }
+
+type TOPSISDistances struct {
+	PositiveDistance float64
+	NegativeDistance float64
+}

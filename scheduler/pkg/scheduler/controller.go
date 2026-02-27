@@ -28,21 +28,15 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 	algorithm.DisplayFuzzyDM(fuzzyDM)
 
 	// run the selection
-	_ = algorithm.SelectNode(fuzzyDM)
+	selectedNodeName := algorithm.SelectNode(fuzzyDM)
 
-	selectedNode := nodes[2]
+	fmt.Printf("Selected Node : %v\n", selectedNodeName)
 
-	// get the telemetry data from this node
-	nodeTelemetry, ok := telemetry.GetNodeMetrics(selectedNode.Name)
-	if !ok {
-		panic("Error getting telemetry")
-	}
-	fmt.Printf("Node mean CPU %f, Node mean RAM %f\n", nodeTelemetry.CPU.Mean, nodeTelemetry.RAM.High)
-	bindPod(client, pod, selectedNode)
+	bindPod(client, pod, selectedNodeName)
 }
 
 // Bind a pod to a Node
-func bindPod(client *kubernetes.Clientset, pod *corev1.Pod, node *corev1.Node) {
+func bindPod(client *kubernetes.Clientset, pod *corev1.Pod, nodeName string) {
 	binding := &v1.Binding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
@@ -51,7 +45,7 @@ func bindPod(client *kubernetes.Clientset, pod *corev1.Pod, node *corev1.Node) {
 		},
 		Target: v1.ObjectReference{
 			Kind: "Node",
-			Name: node.Name,
+			Name: nodeName,
 		},
 	}
 
