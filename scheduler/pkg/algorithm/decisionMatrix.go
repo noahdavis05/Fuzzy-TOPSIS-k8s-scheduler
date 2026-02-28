@@ -110,3 +110,43 @@ func DisplayFuzzyDM(fuzzyDM types.FuzzyDecisionMatrix) {
 	w.Flush()
 	fmt.Println()
 }
+
+// builds a basic fuzzyDM from scratch without the data
+// the data is set manually in each test
+// this just loads in the weights and ideals from config
+func buildTestingDM() types.FuzzyDecisionMatrix {
+	fuzzyDM := types.FuzzyDecisionMatrix{
+		Data: make(map[string]map[string]types.FuzzyNumber),
+	}
+	fuzzyDM.Criteria = []string{
+		"CPU",
+		"RAM",
+		"CPU RANGE",
+		"RAM RANGE",
+	}
+
+	// These are the weights used as part of TOPSIS
+	fuzzyDM.Weights = map[string]types.FuzzyNumber{
+		"CPU":       config.CPUWeights,
+		"RAM":       config.RAMWeights,
+		"CPU RANGE": config.CPURangeWeights,
+		"RAM RANGE": config.RAMRangeWeights,
+	}
+
+	// set the Ideal Positives and Ideal Negatives
+	fuzzyDM.PositiveIdeals = map[string]types.FuzzyNumber{
+		"CPU":       config.PosCPUIdeal,
+		"RAM":       config.PosRAMIdeal,
+		"CPU RANGE": config.PosCPURangeIdeal,
+		"RAM RANGE": config.PosRAMRangeIdeal,
+	}
+
+	fuzzyDM.NegativeIdeals = map[string]types.FuzzyNumber{
+		"CPU":       config.NegCPUIdeal,
+		"RAM":       config.NegRAMIdeal,
+		"CPU RANGE": config.NegCPURangeIdeal,
+		"RAM RANGE": config.NegRAMRangeIdeal,
+	}
+
+	return fuzzyDM
+}

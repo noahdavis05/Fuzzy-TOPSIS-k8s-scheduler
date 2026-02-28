@@ -28,9 +28,9 @@ var (
 		C: 75,
 	}
 	NegCPUIdeal = types.FuzzyNumber{
-		A: 100,
-		B: 100,
-		C: 100,
+		A: 85,
+		B: 85,
+		C: 85,
 	}
 
 	PosRAMIdeal = types.FuzzyNumber{
@@ -39,9 +39,9 @@ var (
 		C: 75,
 	}
 	NegRAMIdeal = types.FuzzyNumber{
-		A: 100,
-		B: 100,
-		C: 100,
+		A: 85,
+		B: 85,
+		C: 85,
 	}
 
 	PosCPURangeIdeal = types.FuzzyNumber{
@@ -49,10 +49,10 @@ var (
 		B: 0,
 		C: 0,
 	}
-	NegCPURangeIdeal = types.FuzzyNumber{
-		A: 100,
-		B: 100,
-		C: 100,
+	NegCPURangeIdeal = types.FuzzyNumber{ // negative range values shouldn't be 100 as this is awful
+		A: 40, // range of 50 still awful and punishes ranges of 20 - 50 better
+		B: 40,
+		C: 40,
 	}
 
 	PosRAMRangeIdeal = types.FuzzyNumber{
@@ -61,33 +61,33 @@ var (
 		C: 0,
 	}
 	NegRAMRangeIdeal = types.FuzzyNumber{
-		A: 100,
-		B: 100,
-		C: 100,
+		A: 40,
+		B: 40,
+		C: 40,
 	}
 
 	// TOPSIS Weights
 	CPUWeights = types.FuzzyNumber{
-		A: 0.5,
-		B: 0.5,
-		C: 0.5,
+		A: 1,
+		B: 1,
+		C: 1,
 	}
 
 	RAMWeights = types.FuzzyNumber{
-		A: 0.5,
-		B: 0.5,
-		C: 0.5,
+		A: 1,
+		B: 1,
+		C: 1,
 	}
 
 	CPURangeWeights = types.FuzzyNumber{
-		A: 0.3,
-		B: 0.3,
-		C: 0.3,
+		A: 1.5,
+		B: 1.5,
+		C: 1.5,
 	}
 
 	RAMRangeWeights = types.FuzzyNumber{
-		A: 0.3,
-		B: 0.3,
-		C: 0.3,
+		A: 1.5,
+		B: 1.5,
+		C: 1.5,
 	}
 )
