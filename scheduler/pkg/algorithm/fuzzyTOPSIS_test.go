@@ -242,11 +242,8 @@ func TestTOPSISRankings(t *testing.T) {
 			expectedNodeName: "Node2",
 		},
 		{
-			// Highly stable node 1t 100 utilisation
-			// vs medium utilisation node with medium stability
-			// vs low utilisiation node with low stability
-			// would expect medium node to win
-			name: "Test Bin Pack",
+			// Test node 1 gets filtered out
+			name: "Test filtering",
 			decisionMatrix: map[string]map[string]types.FuzzyNumber{
 				"Node1": {
 					"CPU": {
@@ -317,6 +314,80 @@ func TestTOPSISRankings(t *testing.T) {
 			},
 			expectedNodeName: "Node2",
 		},
+		{
+			// Test when nodes are all heavily packed
+			// and equal ranges.
+			name: "Test dangerzone",
+			decisionMatrix: map[string]map[string]types.FuzzyNumber{
+				"Node1": {
+					"CPU": {
+						A: 77,
+						B: 82,
+						C: 87,
+					},
+					"RAM": {
+						A: 77,
+						B: 82,
+						C: 87,
+					},
+					"CPU RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+					"RAM RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+				},
+				"Node2": {
+					"CPU": {
+						A: 72,
+						B: 77,
+						C: 82,
+					},
+					"RAM": {
+						A: 72,
+						B: 77,
+						C: 82,
+					},
+					"CPU RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+					"RAM RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+				},
+				"Node3": {
+					"CPU": {
+						A: 67,
+						B: 72,
+						C: 77,
+					},
+					"RAM": {
+						A: 67,
+						B: 72,
+						C: 77,
+					},
+					"CPU RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+					"RAM RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+				},
+			},
+			expectedNodeName: "Node3",
+		},
 	}
 
 	for _, tc := range tests {
@@ -324,10 +395,9 @@ func TestTOPSISRankings(t *testing.T) {
 			// create fuzzyDM
 			fuzzyDM := buildTestingDM()
 			fuzzyDM.Data = tc.decisionMatrix
-			//filterFuzzyData(&fuzzyDM)
 
 			// now run the node selection
-			outputNodeName := SelectNode(fuzzyDM)
+			outputNodeName := selectNode(fuzzyDM, true)
 			fmt.Println(outputNodeName)
 		})
 	}

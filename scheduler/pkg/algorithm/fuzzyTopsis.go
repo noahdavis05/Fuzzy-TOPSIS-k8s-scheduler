@@ -7,6 +7,7 @@ import (
 	"scheduler/pkg/types"
 )
 
+// TODO - In future need to update this to filter based on the pod's request
 // function tkaes the pointer to fuzzy decision matrix and filters out
 // all nodes which are no good. E.g. Nodes which are over the Negative
 // ideal limits.
@@ -15,7 +16,7 @@ func FilterNodes(fuzzyDM *types.FuzzyDecisionMatrix) {
 	nodeNames := []string{}
 	for nodeName, attribute := range fuzzyDM.Data {
 		for attributeName, value := range attribute {
-			if value.A > fuzzyDM.NegativeIdeals[attributeName].C || value.B > fuzzyDM.NegativeIdeals[attributeName].C || value.C > fuzzyDM.NegativeIdeals[attributeName].C {
+			if value.B > fuzzyDM.NegativeIdeals[attributeName].C { // remove from options if mean for given category is worse than the negative ideal
 				nodeNames = append(nodeNames, nodeName)
 			}
 		}
@@ -25,19 +26,23 @@ func FilterNodes(fuzzyDM *types.FuzzyDecisionMatrix) {
 	}
 }
 
-func SelectNode(fuzzyDM types.FuzzyDecisionMatrix) string {
+func selectNode(fuzzyDM types.FuzzyDecisionMatrix, debug bool) string {
 	// all our values in fuzzyDM are percentages e.g. between 0 and 100
 	// therefore already normalised/on same scale
 	FilterNodes(&fuzzyDM)
 	weightNodes(&fuzzyDM)
 	weightIdeals(&fuzzyDM)
-	DisplayFuzzyDM(fuzzyDM)
+	if debug {
+		DisplayFuzzyDM(fuzzyDM)
+	}
 
 	nodeScores := scoreNodes(fuzzyDM)
 
-	fmt.Println("Node scores:")
-	data, _ := json.MarshalIndent(nodeScores, "", "  ")
-	fmt.Println(string(data))
+	if debug {
+		fmt.Println("Node scores:")
+		data, _ := json.MarshalIndent(nodeScores, "", "  ")
+		fmt.Println(string(data))
+	}
 
 	// now get the key of the node with the highest value
 	nodeName := ""
@@ -50,6 +55,12 @@ func SelectNode(fuzzyDM types.FuzzyDecisionMatrix) string {
 	}
 	//
 	return nodeName
+}
+
+// wrapper function which allows me to set debug mode or not
+// useful for running tests
+func SelectNode(fuzzyDM types.FuzzyDecisionMatrix) string {
+	return selectNode(fuzzyDM, false)
 }
 
 func scoreNodes(fuzzyDM types.FuzzyDecisionMatrix) map[string]float64 {

@@ -111,22 +111,6 @@ func DisplayFuzzyDM(fuzzyDM types.FuzzyDecisionMatrix) {
 	fmt.Println()
 }
 
-// function which clips the Data in the fuzzyDM to the negative ideal values
-// e.g. if CPU usage at (79, 89, 99), but negative ideal is (80,80,80)
-// this should be clipped to (79, 80, 80)
-// this ensures it's as close to the negative as possible and harshly punished
-// as when we go passed the worst without this our score improves
-func filterFuzzyData(fuzzyDM *types.FuzzyDecisionMatrix) {
-	for _, attribute := range fuzzyDM.Data {
-		for attributeName, value := range attribute {
-			value.A = min(value.A, fuzzyDM.NegativeIdeals[attributeName].C)
-			value.B = min(value.B, fuzzyDM.NegativeIdeals[attributeName].C)
-			value.C = min(value.C, fuzzyDM.NegativeIdeals[attributeName].C)
-			attribute[attributeName] = value
-		}
-	}
-}
-
 // builds a basic fuzzyDM from scratch without the data
 // the data is set manually in each test
 // this just loads in the weights and ideals from config
