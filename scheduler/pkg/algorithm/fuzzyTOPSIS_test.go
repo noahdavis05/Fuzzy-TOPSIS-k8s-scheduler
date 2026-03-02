@@ -241,6 +241,82 @@ func TestTOPSISRankings(t *testing.T) {
 			},
 			expectedNodeName: "Node2",
 		},
+		{
+			// Highly stable node 1t 100 utilisation
+			// vs medium utilisation node with medium stability
+			// vs low utilisiation node with low stability
+			// would expect medium node to win
+			name: "Test Bin Pack",
+			decisionMatrix: map[string]map[string]types.FuzzyNumber{
+				"Node1": {
+					"CPU": {
+						A: 95,
+						B: 97,
+						C: 100,
+					},
+					"RAM": {
+						A: 95,
+						B: 97,
+						C: 100,
+					},
+					"CPU RANGE": {
+						A: 0,
+						B: 5,
+						C: 5,
+					},
+					"RAM RANGE": {
+						A: 0,
+						B: 5,
+						C: 5,
+					},
+				},
+				"Node2": {
+					"CPU": {
+						A: 55,
+						B: 60,
+						C: 65,
+					},
+					"RAM": {
+						A: 55,
+						B: 60,
+						C: 65,
+					},
+					"CPU RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+					"RAM RANGE": {
+						A: 0,
+						B: 10,
+						C: 10,
+					},
+				},
+				"Node3": {
+					"CPU": {
+						A: 10,
+						B: 20,
+						C: 30,
+					},
+					"RAM": {
+						A: 10,
+						B: 20,
+						C: 30,
+					},
+					"CPU RANGE": {
+						A: 0,
+						B: 20,
+						C: 20,
+					},
+					"RAM RANGE": {
+						A: 0,
+						B: 20,
+						C: 20,
+					},
+				},
+			},
+			expectedNodeName: "Node2",
+		},
 	}
 
 	for _, tc := range tests {
@@ -248,6 +324,7 @@ func TestTOPSISRankings(t *testing.T) {
 			// create fuzzyDM
 			fuzzyDM := buildTestingDM()
 			fuzzyDM.Data = tc.decisionMatrix
+			//filterFuzzyData(&fuzzyDM)
 
 			// now run the node selection
 			outputNodeName := SelectNode(fuzzyDM)

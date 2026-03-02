@@ -49,8 +49,8 @@ var (
 		B: 0,
 		C: 0,
 	}
-	NegCPURangeIdeal = types.FuzzyNumber{ // negative range values shouldn't be 100 as this is awful
-		A: 40, // range of 50 still awful and punishes ranges of 20 - 50 better
+	NegCPURangeIdeal = types.FuzzyNumber{ // negative range values shouldn't be 100 as this is awful and we should never even see this
+		A: 40, // range of 40 still awful and punishes ranges of 20 - 50 better
 		B: 40,
 		C: 40,
 	}

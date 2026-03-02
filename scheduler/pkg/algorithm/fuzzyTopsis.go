@@ -7,9 +7,28 @@ import (
 	"scheduler/pkg/types"
 )
 
+// function tkaes the pointer to fuzzy decision matrix and filters out
+// all nodes which are no good. E.g. Nodes which are over the Negative
+// ideal limits.
+func FilterNodes(fuzzyDM *types.FuzzyDecisionMatrix) {
+	// list of nodes we will remove
+	nodeNames := []string{}
+	for nodeName, attribute := range fuzzyDM.Data {
+		for attributeName, value := range attribute {
+			if value.A > fuzzyDM.NegativeIdeals[attributeName].C || value.B > fuzzyDM.NegativeIdeals[attributeName].C || value.C > fuzzyDM.NegativeIdeals[attributeName].C {
+				nodeNames = append(nodeNames, nodeName)
+			}
+		}
+	}
+	for _, name := range nodeNames {
+		delete(fuzzyDM.Data, name)
+	}
+}
+
 func SelectNode(fuzzyDM types.FuzzyDecisionMatrix) string {
 	// all our values in fuzzyDM are percentages e.g. between 0 and 100
 	// therefore already normalised/on same scale
+	FilterNodes(&fuzzyDM)
 	weightNodes(&fuzzyDM)
 	weightIdeals(&fuzzyDM)
 	DisplayFuzzyDM(fuzzyDM)
