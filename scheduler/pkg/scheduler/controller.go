@@ -27,6 +27,9 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 	fuzzyDM := algorithm.BuildFuzzyDM(nodes)
 	algorithm.DisplayFuzzyDM(fuzzyDM)
 
+	// filter the nodes
+	algorithm.FilterNodes(&fuzzyDM)
+
 	// run the selection
 	selectedNodeName := algorithm.SelectNode(fuzzyDM)
 

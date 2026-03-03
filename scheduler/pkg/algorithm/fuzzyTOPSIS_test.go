@@ -1,9 +1,10 @@
 package algorithm
 
 import (
-	"fmt"
 	"scheduler/pkg/types"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // These tests will mock the whole decision matrix for numerous scenarios
@@ -395,11 +396,11 @@ func TestTOPSISRankings(t *testing.T) {
 			// create fuzzyDM
 			fuzzyDM := buildTestingDM()
 			fuzzyDM.Data = tc.decisionMatrix
+			FilterNodes(&fuzzyDM)
 
 			// now run the node selection
 			outputNodeName := selectNode(fuzzyDM, true)
-			fmt.Println(outputNodeName)
+			assert.Equal(t, outputNodeName, tc.expectedNodeName)
 		})
 	}
-
 }

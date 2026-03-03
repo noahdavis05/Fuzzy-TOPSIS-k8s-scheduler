@@ -29,7 +29,6 @@ func FilterNodes(fuzzyDM *types.FuzzyDecisionMatrix) {
 func selectNode(fuzzyDM types.FuzzyDecisionMatrix, debug bool) string {
 	// all our values in fuzzyDM are percentages e.g. between 0 and 100
 	// therefore already normalised/on same scale
-	FilterNodes(&fuzzyDM)
 	weightNodes(&fuzzyDM)
 	weightIdeals(&fuzzyDM)
 	if debug {
