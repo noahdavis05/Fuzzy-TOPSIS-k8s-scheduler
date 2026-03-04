@@ -7,5 +7,5 @@
   - Create monitoring namespace: `kubectl create namespace monitoring`
   - Install prometheus via helm: `helm install kube-prom-stack prometheus-community/kube-prometheus-stack --namespace monitoring`
   - Get grafana password using the returned command
-  - Port forward grafana to allow access: `kubectl port-forward -n monitoring svc/kube-prom-stack-grafana 3000:80`
+  - Port forward grafana to allow access: `kubectl port-forward -n monitoring svc/kube-prom-stack-grafana 9090:9090`
 

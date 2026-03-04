@@ -40,3 +40,16 @@ type TOPSISDistances struct {
 	PositiveDistance float64
 	NegativeDistance float64
 }
+
+// store info about the cluster in memory
+// includes CPU and RAM limits per node
+type ClusterInfo struct {
+	// maps of node names to value
+	CPULimits map[string]int64
+	RAMLimits map[string]int64
+}
+
+type PodRequest struct {
+	CPU int64
+	RAM int64
+}

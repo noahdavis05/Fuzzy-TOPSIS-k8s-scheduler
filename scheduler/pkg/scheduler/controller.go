@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"scheduler/pkg/algorithm"
+	"scheduler/pkg/cluster"
 	"scheduler/pkg/telemetry"
+	"scheduler/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
@@ -20,6 +23,12 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 		fmt.Printf("failed to list nodes: %v\n", err)
 	}
 
+	// get the pod requests and the cluster limits
+	podRequest := getPodRequests(pod)
+	clusterLimits := cluster.CreateClusterInfo(nodes)
+
+	fmt.Printf("Pod requests %v CPU and %v RAM\n", podRequest.CPU, podRequest.RAM)
+
 	fmt.Println("Loading telemetry data")
 	telemetry.RefreshTelemetryCache(nodes)
 
@@ -28,7 +37,7 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 	algorithm.DisplayFuzzyDM(fuzzyDM)
 
 	// filter the nodes
-	algorithm.FilterNodes(&fuzzyDM)
+	algorithm.FilterNodes(&fuzzyDM, podRequest, clusterLimits)
 
 	// run the selection
 	selectedNodeName := algorithm.SelectNode(fuzzyDM)
@@ -57,4 +66,20 @@ func bindPod(client *kubernetes.Clientset, pod *corev1.Pod, nodeName string) {
 		fmt.Println("Error updating the nodename")
 	}
 
+}
+
+func getPodRequests(pod *corev1.Pod) types.PodRequest {
+	var totalCPU resource.Quantity
+	var totalMem resource.Quantity
+
+	// get the requests for all containers within pod
+	for _, container := range pod.Spec.Containers {
+		totalCPU.Add(*container.Resources.Requests.Cpu())
+		totalMem.Add(*container.Resources.Requests.Memory())
+	}
+
+	return types.PodRequest{
+		CPU: totalCPU.MilliValue(),
+		RAM: totalMem.Value(),
+	}
 }

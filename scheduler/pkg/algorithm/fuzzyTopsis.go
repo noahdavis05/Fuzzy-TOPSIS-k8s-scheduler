@@ -11,19 +11,33 @@ import (
 // function tkaes the pointer to fuzzy decision matrix and filters out
 // all nodes which are no good. E.g. Nodes which are over the Negative
 // ideal limits.
-func FilterNodes(fuzzyDM *types.FuzzyDecisionMatrix) {
+func FilterNodes(fuzzyDM *types.FuzzyDecisionMatrix, podRequests types.PodRequest, clusterLimits types.ClusterInfo) {
 	// list of nodes we will remove
 	nodeNames := []string{}
-	for nodeName, attribute := range fuzzyDM.Data {
-		for attributeName, value := range attribute {
-			if value.B > fuzzyDM.NegativeIdeals[attributeName].C { // remove from options if mean for given category is worse than the negative ideal
-				nodeNames = append(nodeNames, nodeName)
-			}
+	for nodeName, _ := range fuzzyDM.Data {
+		if filterNode(fuzzyDM, nodeName, podRequests, clusterLimits) {
+			nodeNames = append(nodeNames, nodeName)
 		}
 	}
 	for _, name := range nodeNames {
 		delete(fuzzyDM.Data, name)
 	}
+}
+
+// returns true if node should be filtered out
+func filterNode(fuzzyDM *types.FuzzyDecisionMatrix, name string, podRequests types.PodRequest, clusterLimits types.ClusterInfo) bool {
+	// calculate the CPU and RAM request as a percentage of the nodes total CPU and RAM limit
+	percentageCPURequest := (float64(podRequests.CPU) / float64(clusterLimits.CPULimits[name])) * 100
+	percentageRAMRequest := (float64(podRequests.RAM) / float64(clusterLimits.RAMLimits[name])) * 100
+
+	if fuzzyDM.Data[name]["CPU"].B > fuzzyDM.NegativeIdeals["CPU"].C-float64(percentageCPURequest) {
+		return true
+	}
+
+	if fuzzyDM.Data[name]["RAM"].B > fuzzyDM.NegativeIdeals["RAM"].C-float64(percentageRAMRequest) {
+		return true
+	}
+	return false
 }
 
 func selectNode(fuzzyDM types.FuzzyDecisionMatrix, debug bool) string {

@@ -1,6 +1,7 @@
 package algorithm
 
 import (
+	"fmt"
 	"scheduler/pkg/types"
 	"testing"
 
@@ -10,6 +11,30 @@ import (
 // These tests will mock the whole decision matrix for numerous scenarios
 // and ensure we get the node selected that we want
 func TestTOPSISRankings(t *testing.T) {
+	// set constant vars for all these tests
+	// cluster limits - always three nodes, all have the same limits
+	clusterLimits := types.ClusterInfo{
+		CPULimits: map[string]int64{
+			"Node1": 2000,
+			"Node2": 2000,
+			"Node3": 2000,
+		},
+		RAMLimits: map[string]int64{
+			"Node1": 3809775616,
+			"Node2": 3809775616,
+			"Node3": 3809775616,
+		},
+	}
+
+	// podRequests are just needed for the filtering
+	// not too important in this test, just keep them small
+	// so nodes don't need to be filtered unless usage already
+	// very high. Filtering is tested thoroughly in another
+	// test
+	podRequest := types.PodRequest{
+		CPU: 100,
+		RAM: 250,
+	}
 	tests := []struct {
 		name             string
 		decisionMatrix   map[string]map[string]types.FuzzyNumber
@@ -393,14 +418,102 @@ func TestTOPSISRankings(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			fmt.Printf("\n\nRunning Test Case ==> %v\n", tc.name)
 			// create fuzzyDM
 			fuzzyDM := buildTestingDM()
 			fuzzyDM.Data = tc.decisionMatrix
-			FilterNodes(&fuzzyDM)
+			FilterNodes(&fuzzyDM, podRequest, clusterLimits)
 
 			// now run the node selection
-			outputNodeName := selectNode(fuzzyDM, true)
+			outputNodeName := selectNode(fuzzyDM, false)
 			assert.Equal(t, outputNodeName, tc.expectedNodeName)
+
+			if outputNodeName == tc.expectedNodeName {
+				fmt.Printf("\033[32mTest passed: %v\033[0m\n", tc.name)
+			} else {
+				fmt.Printf("\033[31mTest failed: %v\033[0m\n", tc.name)
+			}
+		})
+	}
+}
+
+// The above tests do filter but just assume
+// filtering works. These tests check filtering
+// in more detail.
+func TestFiltering(t *testing.T) {
+	// cluster Limits are the same for all tests
+	// we are just testing one node per test
+	// therefore cluster limits only has one node
+	// this node will just be called Node1
+	nodeName := "Node1"
+
+	clusterNodes := types.ClusterInfo{
+		CPULimits: map[string]int64{
+			"Node1": 2000, // 2 cores
+		},
+		RAMLimits: map[string]int64{
+			"Node1": 3809775616, // 3.8 GB
+		},
+	}
+
+	// make scenarios for Node1's state e.g. under heavy load and under low load
+	// 75% load on all 10% range
+	scneario1 := map[string]map[string]types.FuzzyNumber{
+		nodeName: {
+			"CPU": types.FuzzyNumber{
+				A: 70,
+				B: 75,
+				C: 80,
+			},
+			"RAM": types.FuzzyNumber{
+				A: 70,
+				B: 75,
+				C: 80,
+			},
+		},
+	}
+	tests := []struct {
+		name           string
+		podRequest     types.PodRequest
+		nodeTelemetry  map[string]map[string]types.FuzzyNumber
+		expectedResult bool
+	}{
+		{
+			name: "Test node not filtered",
+			podRequest: types.PodRequest{
+				CPU: 200,
+				RAM: 500000,
+			},
+			nodeTelemetry:  scneario1,
+			expectedResult: false,
+		},
+		{
+			name: "Test pod requests too much CPU",
+			podRequest: types.PodRequest{
+				CPU: 250,
+				RAM: 500000,
+			},
+			nodeTelemetry:  scneario1,
+			expectedResult: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// create fuzzyDM
+			fmt.Printf("\n\nRunning Test Case ==> %v\n", tc.name)
+			fuzzyDM := buildTestingDM()
+			fuzzyDM.Data = tc.nodeTelemetry
+			res := filterNode(&fuzzyDM, nodeName, tc.podRequest, clusterNodes)
+			// proper assertion
+			assert.Equal(t, res, tc.expectedResult)
+
+			// another check to print out a success message in green or error in red
+			if res == tc.expectedResult {
+				fmt.Printf("\033[32mTest passed: %v\033[0m\n", tc.name)
+			} else {
+				fmt.Printf("\033[31mTest failed: %v\033[0m\n", tc.name)
+			}
 		})
 	}
 }
