@@ -479,7 +479,7 @@ func TestFiltering(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name: "Test node not filtered",
+			name: "Test node doesn't get filtered",
 			podRequest: types.PodRequest{
 				CPU: 200,
 				RAM: 500000,
@@ -492,6 +492,24 @@ func TestFiltering(t *testing.T) {
 			podRequest: types.PodRequest{
 				CPU: 250,
 				RAM: 500000,
+			},
+			nodeTelemetry:  scneario1,
+			expectedResult: true,
+		},
+		{
+			name: "Test pod requests too much RAM",
+			podRequest: types.PodRequest{
+				CPU: 200,
+				RAM: 381000000,
+			},
+			nodeTelemetry:  scneario1,
+			expectedResult: true,
+		},
+		{
+			name: "Test pod requests too much RAM and CPU",
+			podRequest: types.PodRequest{
+				CPU: 250,
+				RAM: 381000000,
 			},
 			nodeTelemetry:  scneario1,
 			expectedResult: true,

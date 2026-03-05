@@ -1,8 +1,10 @@
 package telemetry
 
 import (
+	"fmt"
 	"scheduler/pkg/types"
 	"sync"
+	"time"
 )
 
 // this is the telemetry data cache
@@ -29,4 +31,14 @@ func GetNodeMetrics(nodeName string) (types.NodeTelemetryMetrics, bool) {
 	defer globalCache.RUnlock()
 	val, ok := globalCache.data[nodeName]
 	return val, ok
+}
+
+func PodScheduled(nodeName string) {
+	globalCache.Lock() // full lock to write
+	defer globalCache.Unlock()
+
+	metrics := globalCache.data[nodeName]
+	metrics.LastScheduled = time.Now()
+	globalCache.data[nodeName] = metrics
+	fmt.Printf("Updated Node: %v scheduled time. Node looks like : %v\n", nodeName, globalCache.data[nodeName])
 }

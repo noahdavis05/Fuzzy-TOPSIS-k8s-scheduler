@@ -43,7 +43,7 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 	selectedNodeName := algorithm.SelectNode(fuzzyDM)
 
 	fmt.Printf("Selected Node : %v\n", selectedNodeName)
-
+	telemetry.PodScheduled(selectedNodeName)
 	bindPod(client, pod, selectedNodeName)
 }
 
@@ -63,7 +63,7 @@ func bindPod(client *kubernetes.Clientset, pod *corev1.Pod, nodeName string) {
 
 	err := client.CoreV1().Pods(pod.Namespace).Bind(context.TODO(), binding, metav1.CreateOptions{})
 	if err != nil {
-		fmt.Println("Error updating the nodename")
+		fmt.Println("Error binding the pod")
 	}
 
 }

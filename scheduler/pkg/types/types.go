@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 type TelemetryMetric struct {
 	Low  float64
 	Mean float64
@@ -7,8 +9,9 @@ type TelemetryMetric struct {
 }
 
 type NodeTelemetryMetrics struct {
-	CPU TelemetryMetric
-	RAM TelemetryMetric
+	CPU           TelemetryMetric
+	RAM           TelemetryMetric
+	LastScheduled time.Time // will default to  0001-01-01 00:00:00 +0000 UTC before anything has been scheduled
 }
 
 type FuzzyNumber struct {
