@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"scheduler/pkg/config"
 	"scheduler/pkg/types"
@@ -45,21 +44,6 @@ func AutoRefreshTelemetryCache(stopCh <-chan struct{}, interval time.Duration, n
 	}
 }
 
-/*
-This needs to be rewritten. We need to treat range differently for nodes which have recently been scheduled to.
-To do this we can keep our current approach for all nodes which haven't been scheduled to. We can expect this to
-be a large fraction of our nodes as bin packing will typically schedule to one node until full and then so on.
-For all nodes which have been scheduled to within the last 5 minutes we must make custom prometheus calls.
-
-If a node was scheduled to within the last 1 minute, we will use its old range. We will get this by requesting
-that nodes metrics and using its old range and putting it around the new mean.
-
-If a node was scheduled to within the last 2 minutes, we will get its accurate range, but only within the correct
-time period. This means we can't use any values within the range from before the pod was scheduled.
-
-We may need to add a buffer to these times for how long it takes to start a pod? This might be difficult.
-*/
-
 func RefreshTelemetryCache(nodes []*v1.Node) {
 
 	// make a prometheus client which we can make API calls with
@@ -89,8 +73,8 @@ func RefreshTelemetryCache(nodes []*v1.Node) {
 	returnData := applyRecentBias(promApi, nodes, finalData)
 
 	// print out data for debugging
-	jsonData, _ := json.MarshalIndent(returnData, "", "  ")
-	fmt.Println(string(jsonData))
+	//jsonData, _ := json.MarshalIndent(returnData, "", "  ")
+	//fmt.Println(string(jsonData))
 	UpdateCache(returnData)
 }
 
@@ -111,7 +95,7 @@ func applyRecentBias(promAPI promv1.API, nodes []*v1.Node, currentData map[strin
 				returnData[node.Name] = currentData[node.Name]
 			} else {
 				if timeSince > 2*time.Minute {
-
+					returnData[node.Name] = subFiveMinBias(promAPI, oldNodeData, node)
 				} else {
 					// we will get the mean from the last 2 mins and use the old range as old range may not have settled
 					returnData[node.Name] = subTwoMinBias(promAPI, oldNodeData, node)
@@ -156,9 +140,11 @@ func subTwoMinBias(promAPI promv1.API, oldNodeData types.NodeTelemetryMetrics, n
 	}
 }
 
-func subFiveMinBias(promAPI promv1.API) types.NodeTelemetryMetrics {
-
-	return types.NodeTelemetryMetrics{}
+func subFiveMinBias(promAPI promv1.API, oldNodeData types.NodeTelemetryMetrics, node *v1.Node) types.NodeTelemetryMetrics {
+	seconds := int64(time.Since(oldNodeData.LastScheduled).Seconds())
+	nodeIP := getNodeAddress(node)
+	fmt.Println("In sub five mins bias")
+	return nodeTelemetryAll(promAPI, nodeIP, seconds)
 }
 
 // function gets just the mean telemetry for RAM and CPU over the last N seconds
@@ -168,15 +154,12 @@ func nodeTelemetryMeans(prompApi promv1.API, nodeIP string, seconds int64) (floa
 	// this means we use as little telemetry as possible from before the node was last scheduled
 	minutes := max(1, (seconds+59)/60)
 	queryRAM := fmt.Sprintf(`avg_over_time((100 * (1 - (node_memory_MemAvailable_bytes{instance=~"%s:.*"} / node_memory_MemTotal_bytes{instance=~"%s:.*"})))[%dm:15s])`, nodeIP, nodeIP, minutes)
-
-	// CPU query uses the standard rate over 5m, then averages those results
 	queryCPU := fmt.Sprintf(`avg_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{instance=~"%s:.*", mode="idle"}[1m])) * 100))[%dm:15s])`, nodeIP, minutes)
 
 	// make both of these queries
 	resultRAM := makePromRequest(prompApi, queryRAM)
 	resultCPU := makePromRequest(prompApi, queryCPU)
 
-	// safely extract results from prom queries
 	extract := func(v model.Value) float64 {
 		if v == nil {
 			return 0.0
@@ -187,7 +170,6 @@ func nodeTelemetryMeans(prompApi promv1.API, nodeIP string, seconds int64) (floa
 		}
 		return float64(vec[0].Value)
 	}
-
 	return extract(resultCPU), extract(resultRAM)
 }
 
@@ -195,7 +177,46 @@ func nodeTelemetryMeans(prompApi promv1.API, nodeIP string, seconds int64) (floa
 // seconds is handled the same as the above function
 // this function gets high and low over this period as well as the means
 func nodeTelemetryAll(prompApi promv1.API, nodeIP string, seconds int64) types.NodeTelemetryMetrics {
+	minutes := max(1, (seconds+59)/60)
+	selector := fmt.Sprintf(`instance=~"%s:.*"`, nodeIP)
+	queries := []telemetryQuery{
+		{fmt.Sprintf(`avg_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{%s, mode="idle"}[1m])) * 100))[%dm:15s])`, selector, minutes), "CPU", "Mean"},
+		{fmt.Sprintf(`min_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{%s, mode="idle"}[1m])) * 100))[%dm:15s])`, selector, minutes), "CPU", "Low"},
+		{fmt.Sprintf(`max_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{%s, mode="idle"}[1m])) * 100))[%dm:15s])`, selector, minutes), "CPU", "High"},
+		{fmt.Sprintf(`avg_over_time((100 * (1 - (node_memory_MemAvailable_bytes{%s} / node_memory_MemTotal_bytes{%s})))[%dm:15s])`, selector, selector, minutes), "RAM", "Mean"},
+		{fmt.Sprintf(`min_over_time((100 * (1 - (node_memory_MemAvailable_bytes{%s} / node_memory_MemTotal_bytes{%s})))[%dm:15s])`, selector, selector, minutes), "RAM", "Low"},
+		{fmt.Sprintf(`max_over_time((100 * (1 - (node_memory_MemAvailable_bytes{%s} / node_memory_MemTotal_bytes{%s})))[%dm:15s])`, selector, selector, minutes), "RAM", "High"},
+	}
+
 	nodeTelemetry := types.NodeTelemetryMetrics{}
+
+	for _, query := range queries {
+		result := makePromRequest(prompApi, query.Query)
+
+		resVector := result.(model.Vector)
+		value := float64(resVector[0].Value)
+
+		switch query.MetricType {
+		case "CPU":
+			switch query.Stat {
+			case "Mean":
+				nodeTelemetry.CPU.Mean = float64(value)
+			case "Low":
+				nodeTelemetry.CPU.Low = float64(value)
+			case "High":
+				nodeTelemetry.CPU.High = float64(value)
+			}
+		case "RAM":
+			switch query.Stat {
+			case "Mean":
+				nodeTelemetry.RAM.Mean = float64(value)
+			case "Low":
+				nodeTelemetry.RAM.Low = float64(value)
+			case "High":
+				nodeTelemetry.RAM.High = float64(value)
+			}
+		}
+	}
 	return nodeTelemetry
 }
 
