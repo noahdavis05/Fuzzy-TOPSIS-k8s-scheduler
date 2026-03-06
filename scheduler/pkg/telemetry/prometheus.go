@@ -95,7 +95,7 @@ func applyRecentBias(promAPI promv1.API, nodes []*v1.Node, currentData map[strin
 				returnData[node.Name] = currentData[node.Name]
 			} else {
 				if timeSince > 2*time.Minute {
-					returnData[node.Name] = subFiveMinBias(promAPI, oldNodeData, node)
+					returnData[node.Name] = subFiveMinBias(promAPI, oldNodeData, node, oldNodeData.LastScheduled)
 				} else {
 					// we will get the mean from the last 2 mins and use the old range as old range may not have settled
 					returnData[node.Name] = subTwoMinBias(promAPI, oldNodeData, node)
@@ -140,11 +140,13 @@ func subTwoMinBias(promAPI promv1.API, oldNodeData types.NodeTelemetryMetrics, n
 	}
 }
 
-func subFiveMinBias(promAPI promv1.API, oldNodeData types.NodeTelemetryMetrics, node *v1.Node) types.NodeTelemetryMetrics {
+func subFiveMinBias(promAPI promv1.API, oldNodeData types.NodeTelemetryMetrics, node *v1.Node, lastScheduled time.Time) types.NodeTelemetryMetrics {
 	seconds := int64(time.Since(oldNodeData.LastScheduled).Seconds())
 	nodeIP := getNodeAddress(node)
 	fmt.Println("In sub five mins bias")
-	return nodeTelemetryAll(promAPI, nodeIP, seconds)
+	newTelemetry := nodeTelemetryAll(promAPI, nodeIP, seconds)
+	newTelemetry.LastScheduled = lastScheduled
+	return newTelemetry
 }
 
 // function gets just the mean telemetry for RAM and CPU over the last N seconds

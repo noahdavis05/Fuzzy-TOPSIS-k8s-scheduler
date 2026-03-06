@@ -8,4 +8,6 @@
   - Install prometheus via helm: `helm install kube-prom-stack prometheus-community/kube-prometheus-stack --namespace monitoring`
   - Get grafana password using the returned command
   - Port forward grafana to allow access: `kubectl port-forward -n monitoring svc/kube-prom-stack-grafana 9090:9090`
+  - `kubectl port-forward -n monitoring svc/kube-prom-stack-kube-prome-prometheus 9090:9090` to port forward for running scheduler locally.
+
 
