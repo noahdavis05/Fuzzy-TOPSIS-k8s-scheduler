@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,11 +14,22 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"scheduler/pkg/dashboard"
 	"scheduler/pkg/scheduler"
 	"scheduler/pkg/telemetry"
 )
 
 func main() {
+	mux := http.NewServeMux()
+	// serve the react frontend
+	mux.Handle("/", http.FileServer(dashboard.GetFileSystem()))
+
+	// run the server in go routine
+	// this just serves the react app
+	go func() {
+		fmt.Println("Dashboard available at http://localhost:8080")
+		http.ListenAndServe(":8080", mux)
+	}()
 	fmt.Println("Starting Scheduler")
 
 	// load kubeconfig
