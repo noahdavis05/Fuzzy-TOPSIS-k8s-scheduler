@@ -33,6 +33,12 @@ func GetNodeMetrics(nodeName string) (types.NodeTelemetryMetrics, bool) {
 	return val, ok
 }
 
+func GetFullCache() map[string]types.NodeTelemetryMetrics {
+	globalCache.RLock() // read lock
+	defer globalCache.RUnlock()
+	return globalCache.data
+}
+
 func PodScheduled(nodeName string) {
 	globalCache.Lock() // full lock to write
 	defer globalCache.Unlock()

@@ -32,6 +32,10 @@ func main() {
 	}()
 	fmt.Println("Starting Scheduler")
 
+	// start the websocket server
+	// this will serve data to the react app
+	go dashboard.StartServer()
+
 	// load kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", "/home/noah/.kube/config")
 	if err != nil {

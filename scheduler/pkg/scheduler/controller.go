@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"scheduler/pkg/algorithm"
 	"scheduler/pkg/cluster"
+	"scheduler/pkg/dashboard"
 	"scheduler/pkg/telemetry"
 	"scheduler/pkg/types"
 
@@ -23,18 +24,23 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 		fmt.Printf("failed to list nodes: %v\n", err)
 	}
 
+	// create a PodScheduledMessage struct to record logs of this event
+	psm := dashboard.PodScheduledMessage{}
+
 	// get the pod requests and the cluster limits
 	podRequest := getPodRequests(pod)
 	clusterLimits := cluster.CreateClusterInfo(nodes)
 
-	fmt.Printf("Pod requests %v CPU and %v RAM\n", podRequest.CPU, podRequest.RAM)
+	psm.CPURequests = podRequest.CPU
+	psm.RAMRequests = podRequest.RAM
+	psm.TelemetryCache = dashboard.JsonCopy(telemetry.GetFullCache())
 
-	fmt.Println("Loading telemetry data")
-	telemetry.RefreshTelemetryCache(nodes)
+	fmt.Printf("Pod requests %v CPU and %v RAM\n", podRequest.CPU, podRequest.RAM)
 
 	// create fuzzy decision matrix and print in terminal for debugging
 	fuzzyDM := algorithm.BuildFuzzyDM(nodes)
 	algorithm.DisplayFuzzyDM(fuzzyDM)
+	psm.InitialFuzzyDM = dashboard.JsonCopy(fuzzyDM)
 
 	// filter the nodes
 	algorithm.FilterNodes(&fuzzyDM, podRequest, clusterLimits)
@@ -42,9 +48,14 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 	// run the selection
 	selectedNodeName := algorithm.SelectNode(fuzzyDM)
 
+	psm.NodeName = selectedNodeName
+
 	fmt.Printf("Selected Node : %v\n", selectedNodeName)
 	telemetry.PodScheduled(selectedNodeName)
 	bindPod(client, pod, selectedNodeName)
+
+	// now send this to the web UI via websocket
+	dashboard.PublishScheduleUpdate(psm)
 }
 
 // Bind a pod to a Node
