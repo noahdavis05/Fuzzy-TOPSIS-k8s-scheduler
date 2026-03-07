@@ -44,9 +44,10 @@ func SchedulePod(client *kubernetes.Clientset, pod *corev1.Pod, nodeLister v1lis
 
 	// filter the nodes
 	algorithm.FilterNodes(&fuzzyDM, podRequest, clusterLimits)
+	psm.FilteredFuzzyDM = dashboard.JsonCopy(fuzzyDM)
 
 	// run the selection
-	selectedNodeName := algorithm.SelectNode(fuzzyDM)
+	selectedNodeName := algorithm.SelectNode(fuzzyDM, &psm)
 
 	psm.NodeName = selectedNodeName
 

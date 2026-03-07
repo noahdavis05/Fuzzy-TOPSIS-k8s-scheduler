@@ -1,5 +1,5 @@
 
-function LiveSchedulerUpdates({ data }) {
+function LiveSchedulerUpdates({ data, setScheduleIndex }) {
 
     return (
         <>
@@ -8,7 +8,29 @@ function LiveSchedulerUpdates({ data }) {
                 <h3>Recently Scheduled pods</h3>
             </div>
             <div className="card-body">
-                <pre>{data ? JSON.stringify(data, null, 2) : "No updates yet"}</pre>
+                {data.length === 0 ? (
+                    <p>No updates yet</p>
+                ) : (
+                    data.map((item, originalIndex) => ({ item, originalIndex }))
+                    .reverse()
+                    .map(({ item, originalIndex }) => (
+                        <div
+                            key={originalIndex}
+                            className="alert alert-info d-flex justify-content-between align-items-center"
+                            >
+                            <span>
+                                Scheduling notification {originalIndex}: pod scheduled to
+                                node {item.payload.nodeName}
+                            </span>
+                            <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => setScheduleIndex(originalIndex)}
+                            >
+                                Details
+                            </button>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
         </>

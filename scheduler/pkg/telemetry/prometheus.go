@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"scheduler/pkg/config"
+	"scheduler/pkg/dashboard"
 	"scheduler/pkg/types"
 	"strings"
 	"time"
@@ -70,7 +71,14 @@ func RefreshTelemetryCache(nodes []*v1.Node) {
 		}
 	}
 
+	// make a telemetry cache struct for the logs/debug UI
+	telCacheMessage := dashboard.TelemetryCacheMessage{}
+	telCacheMessage.UnfilteredData = dashboard.JsonCopy(finalData)
+
 	returnData := applyRecentBias(promApi, nodes, finalData)
+	telCacheMessage.FilteredData = dashboard.JsonCopy(returnData)
+
+	dashboard.PublishTelemetryCache(telCacheMessage)
 
 	// print out data for debugging
 	//jsonData, _ := json.MarshalIndent(returnData, "", "  ")

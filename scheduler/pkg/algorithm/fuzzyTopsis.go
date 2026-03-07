@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"scheduler/pkg/dashboard"
 	"scheduler/pkg/types"
 )
 
@@ -40,7 +41,7 @@ func filterNode(fuzzyDM *types.FuzzyDecisionMatrix, name string, podRequests typ
 	return false
 }
 
-func selectNode(fuzzyDM types.FuzzyDecisionMatrix, debug bool) string {
+func selectNode(fuzzyDM types.FuzzyDecisionMatrix, scheduleData *dashboard.PodScheduledMessage, debug bool) string {
 	// all our values in fuzzyDM are percentages e.g. between 0 and 100
 	// therefore already normalised/on same scale
 	weightNodes(&fuzzyDM)
@@ -49,7 +50,10 @@ func selectNode(fuzzyDM types.FuzzyDecisionMatrix, debug bool) string {
 		DisplayFuzzyDM(fuzzyDM)
 	}
 
+	scheduleData.WeightedFuzzyDM = fuzzyDM
+
 	nodeScores := scoreNodes(fuzzyDM)
+	scheduleData.NodeScores = dashboard.JsonCopy(nodeScores)
 
 	if debug {
 		fmt.Println("Node scores:")
@@ -72,8 +76,8 @@ func selectNode(fuzzyDM types.FuzzyDecisionMatrix, debug bool) string {
 
 // wrapper function which allows me to set debug mode or not
 // useful for running tests
-func SelectNode(fuzzyDM types.FuzzyDecisionMatrix) string {
-	return selectNode(fuzzyDM, false)
+func SelectNode(fuzzyDM types.FuzzyDecisionMatrix, scheduleData *dashboard.PodScheduledMessage) string {
+	return selectNode(fuzzyDM, scheduleData, false)
 }
 
 func scoreNodes(fuzzyDM types.FuzzyDecisionMatrix) map[string]float64 {

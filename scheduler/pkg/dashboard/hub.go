@@ -29,6 +29,15 @@ type PodScheduledMessage struct {
 
 	// initial fuzzy Decision Matrix
 	InitialFuzzyDM types.FuzzyDecisionMatrix `json:"initialFuzzyDM"`
+
+	// Fuzzy DM after filtering
+	FilteredFuzzyDM types.FuzzyDecisionMatrix `json:"filteredFuzzyDM"`
+
+	// Fuzzy DM after weighting
+	WeightedFuzzyDM types.FuzzyDecisionMatrix `json:"weightedFuzzyDM"`
+
+	// final node scores
+	NodeScores map[string]float64 `json:"nodeScores"`
 }
 
 func PublishScheduleUpdate(data PodScheduledMessage) {
@@ -42,6 +51,28 @@ func PublishScheduleUpdate(data PodScheduledMessage) {
 		fmt.Printf("Error: %v", err)
 		return
 	}
+
+	broadcastToWS(jsonBytes)
+}
+
+type TelemetryCacheMessage struct {
+	UnfilteredData map[string]types.NodeTelemetryMetrics `json:"unfilteredCache"`
+	FilteredData   map[string]types.NodeTelemetryMetrics `json:"filteredCache"`
+}
+
+func PublishTelemetryCache(data TelemetryCacheMessage) {
+	wrapper := HubMessage{
+		Subject: "telemetry_cache",
+		Payload: data,
+	}
+
+	jsonBytes, err := json.Marshal(wrapper)
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+		return
+	}
+
+	fmt.Println("Publishing Telemetry Cache")
 
 	broadcastToWS(jsonBytes)
 }
