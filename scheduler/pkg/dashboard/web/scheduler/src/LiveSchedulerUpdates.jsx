@@ -19,8 +19,7 @@ function LiveSchedulerUpdates({ data, setScheduleIndex }) {
                             className="alert alert-info d-flex justify-content-between align-items-center"
                             >
                             <span>
-                                Scheduling notification {originalIndex}: pod scheduled to
-                                node {item.payload.nodeName}
+                                {originalIndex}: pod scheduled {item.payload.nodeName}
                             </span>
                             <button
                                 className="btn btn-sm btn-primary"

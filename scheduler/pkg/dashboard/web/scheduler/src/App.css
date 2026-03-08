@@ -1,0 +1,43 @@
+/* Full dark background for body */
+body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+/* Cards styling for dark theme */
+.card {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #333;
+}
+
+/* Alerts in dark mode */
+.alert-info {
+  background-color: #2a2a2a;
+  color: #cce5ff;
+  border-color: #444;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Make rows full screen height */
+html, body, .app-container {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollable card bodies if content overflows */
+.card-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}

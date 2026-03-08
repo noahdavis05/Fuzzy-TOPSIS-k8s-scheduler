@@ -3,6 +3,7 @@ import LiveTelemetryGraphs from './LiveTelemetryGraphs'
 import LiveTelemetryCache from './LiveTelemetryCache'
 import LiveSchedulerUpdates from './LiveSchedulerUpdates'
 import DetailedScheduleInfo from './DetailedScheduleInfo'
+import './App.css';
 
 import { useEffect, useState } from "react";
 
@@ -53,25 +54,33 @@ function App() {
   }, []);
 
   return (
-    <>
-    <div className='nav'>
-      Scheduler
+    <div className="app-container bg-dark text-light min-vh-100">
+      <nav className="navbar navbar-dark bg-dark shadow-sm mb-3">
+        <div className="container-fluid">
+          <span className="navbar-brand mb-0 h1">K8s Scheduler Dashboard</span>
+        </div>
+      </nav>
+
+      <div className="container-fluid">
+        <div className="row gx-3" style={{ minHeight: '50vh' }}>
+          <div className="col-lg-4 mb-3">
+            <LiveTelemetryGraphs />
+          </div>
+          <div className="col-lg-4 mb-3">
+            <LiveTelemetryCache data={telemetryCache} />
+          </div>
+          <div className="col-lg-4 mb-3">
+            <LiveSchedulerUpdates data={schedulerUpdates} setScheduleIndex={setScheduleIndex} />
+          </div>
+        </div>
+
+        <div className="row mt-3" style={{ minHeight: '40vh' }}>
+          <div className="col">
+            <DetailedScheduleInfo data={schedulerUpdates} index={scheduleIndex} />
+          </div>
+        </div>
+      </div>
     </div>
-     <div className='row'>
-        <div className='col'>
-          <LiveTelemetryGraphs></LiveTelemetryGraphs>
-        </div>
-        <div className='col'>
-          <LiveTelemetryCache data={telemetryCache}></LiveTelemetryCache>
-        </div>
-        <div className='col'>
-          <LiveSchedulerUpdates data={schedulerUpdates} setScheduleIndex={setScheduleIndex}></LiveSchedulerUpdates>
-        </div>
-     </div>
-     <div className='row'>
-        <DetailedScheduleInfo data={schedulerUpdates} index={scheduleIndex}></DetailedScheduleInfo>
-     </div>
-    </>
   )
 }
 

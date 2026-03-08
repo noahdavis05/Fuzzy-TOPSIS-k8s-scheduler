@@ -13,8 +13,10 @@ function DetailedScheduleInfo({ data, index}) {
           <p>No Schedule Selected</p>
         ) : (
           <ObjectInspector
-            data={data[index]}
+            data={data[index].payload}
             expandLevel={2} 
+            theme="chromeDark"
+            style={{ fontSize: '1.1rem', lineHeight: '1.5' }}
           />
         )}
       </div>

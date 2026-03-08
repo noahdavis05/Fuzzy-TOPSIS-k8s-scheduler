@@ -44,7 +44,9 @@ function LiveTelemetryCache({ data }) {
           <ObjectInspector
             key="unfiltered"
             data={unfilteredCache}
-            expandLevel={1} 
+            expandLevel={0}
+            theme="chromeDark"
+            style={{ fontSize: '1.1rem', lineHeight: '1.5' }} 
           />
         </div>
 
@@ -55,6 +57,8 @@ function LiveTelemetryCache({ data }) {
             key="filtered"
             data={filteredCache}
             expandLevel={1} 
+            theme="chromeDark"
+            style={{ fontSize: '1.1rem', lineHeight: '1.5' }}
           />
         </div>
       </div>
