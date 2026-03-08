@@ -13,6 +13,7 @@ function App() {
 
   const [schedulerUpdates, setSchedulerUpdates] = useState([]);
   const [telemetryCache, setTelemetryCache] = useState([]);
+  const [telemetryLive, setTelemetryLive] = useState([]);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8090/ws");
@@ -42,7 +43,10 @@ function App() {
           return newArray.slice(-500);
         });
       } else if (message.subject == "live_telemetry"){
-
+        setTelemetryLive(prev => {
+          const newArray = [...prev, message];
+          return newArray.slice(-500);
+        });
       }
 
     };
@@ -57,14 +61,14 @@ function App() {
     <div className="app-container bg-dark text-light min-vh-100">
       <nav className="navbar navbar-dark bg-dark shadow-sm mb-3">
         <div className="container-fluid">
-          <span className="navbar-brand mb-0 h1">K8s Scheduler Dashboard</span>
+          <span className="navbar-brand mb-0 h1">Fuzzy TOPSIS Scheduler Monitor</span>
         </div>
       </nav>
 
       <div className="container-fluid">
         <div className="row gx-3" style={{ minHeight: '50vh' }}>
           <div className="col-lg-4 mb-3">
-            <LiveTelemetryGraphs />
+            <LiveTelemetryGraphs data={telemetryLive}/>
           </div>
           <div className="col-lg-4 mb-3">
             <LiveTelemetryCache data={telemetryCache} />

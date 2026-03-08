@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"scheduler/pkg/types"
+	"time"
 )
 
 // This file is the hub which will take messages from the scheduler and pass them to the web UI
@@ -72,7 +73,27 @@ func PublishTelemetryCache(data TelemetryCacheMessage) {
 		return
 	}
 
-	fmt.Println("Publishing Telemetry Cache")
+	broadcastToWS(jsonBytes)
+}
+
+type TelemetryLiveMessage struct {
+	// map is as follows - data["NodeName"]["CPU"] = val
+	Data map[string]map[string]float64
+
+	Timestamp time.Time
+}
+
+func PublishTelemetryLive(data TelemetryLiveMessage) {
+	wrapper := HubMessage{
+		Subject: "live_telemetry",
+		Payload: data,
+	}
+
+	jsonBytes, err := json.Marshal(wrapper)
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+		return
+	}
 
 	broadcastToWS(jsonBytes)
 }

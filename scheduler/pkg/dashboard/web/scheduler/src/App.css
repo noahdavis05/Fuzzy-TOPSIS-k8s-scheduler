@@ -38,6 +38,6 @@ html, body, .app-container {
 
 /* Scrollable card bodies if content overflows */
 .card-body {
-  max-height: 60vh;
+  height: 60vh;
   overflow-y: auto;
 }

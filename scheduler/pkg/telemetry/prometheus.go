@@ -84,6 +84,9 @@ func RefreshTelemetryCache(nodes []*v1.Node) {
 	//jsonData, _ := json.MarshalIndent(returnData, "", "  ")
 	//fmt.Println(string(jsonData))
 	UpdateCache(returnData)
+
+	// update the live telemetry graphs in logs/debug UI
+	streamTelemetryToDashboard(promApi, nodes)
 }
 
 func applyRecentBias(promAPI promv1.API, nodes []*v1.Node, currentData map[string]types.NodeTelemetryMetrics) map[string]types.NodeTelemetryMetrics {
@@ -313,4 +316,47 @@ func getNodeAddress(node *v1.Node) string {
 		}
 	}
 	return ""
+}
+
+func streamTelemetryToDashboard(promAPI promv1.API, nodes []*v1.Node) {
+	queries := []struct {
+		Query      string
+		MetricType string
+	}{
+		{`100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[10s])) * 100)`, "CPU"},
+		{`100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))`, "RAM"},
+	}
+
+	message := dashboard.TelemetryLiveMessage{
+		Data: make(map[string]map[string]float64),
+	}
+
+	for _, query := range queries {
+		result := makePromRequest(promAPI, query.Query)
+		resVector := result.(model.Vector)
+
+		for _, sample := range resVector {
+			instance := string(sample.Metric["instance"])
+			ip := strings.Split(instance, ":")[0]
+			nodeName := ""
+			for _, node := range nodes {
+				for _, addr := range node.Status.Addresses {
+					if addr.Type == v1.NodeInternalIP {
+						if addr.Address == ip {
+							nodeName = node.Name
+						}
+					}
+				}
+			}
+
+			value := float64(sample.Value)
+			if _, exists := message.Data[nodeName]; !exists {
+				message.Data[nodeName] = make(map[string]float64)
+			}
+			message.Data[nodeName][query.MetricType] = value
+		}
+	}
+	message.Timestamp = time.Now()
+
+	dashboard.PublishTelemetryLive(message)
 }
