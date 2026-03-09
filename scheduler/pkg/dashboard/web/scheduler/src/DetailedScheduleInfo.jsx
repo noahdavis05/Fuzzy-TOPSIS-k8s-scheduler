@@ -1,27 +1,33 @@
-import { ObjectInspector } from 'react-inspector';
+import FuzzyDecisionMatrix from "./FuzzyDecisionMatrix";
+import { NodeInfoTable } from "./NodeInfoTable";
+import { TelemetryCacheTable } from "./TelemetryCacheTable";
+import { NodeScoresTable } from "./NodeScoresTable";
 
+function DetailedScheduleInfo({ data, index }) {
+  if (index == null || !data) return <p>No Schedule Selected</p>;
 
-function DetailedScheduleInfo({ data, index}) {
+  const payload = data[index].payload;
+  const { initialFuzzyDM, filteredFuzzyDM, weightedFuzzyDM, telemetryCache, nodeScores, ...rest } = payload;
 
-    return (
+  return (
     <div className="card">
       <div className="card-header">
         <h2>Detailed Schedule Info</h2>
       </div>
       <div className="card-body">
-        {index == null || !data ? (
-          <p>No Schedule Selected</p>
-        ) : (
-          <ObjectInspector
-            data={data[index].payload}
-            expandLevel={2} 
-            theme="chromeDark"
-            style={{ fontSize: '1.1rem', lineHeight: '1.5' }}
-          />
-        )}
+        <NodeInfoTable {...rest} />
+        <TelemetryCacheTable telemetryCache={telemetryCache} />
+        <FuzzyDecisionMatrix matrix={initialFuzzyDM} title="Initial Fuzzy DM" />
+        <FuzzyDecisionMatrix matrix={filteredFuzzyDM} title="Filtered Fuzzy DM" />
+        <FuzzyDecisionMatrix matrix={weightedFuzzyDM} title="Weighted Fuzzy DM" />
+
+        
+        
+        <NodeScoresTable nodeScores={nodeScores} />
+
       </div>
     </div>
   );
 }
 
-export default DetailedScheduleInfo
+export default DetailedScheduleInfo;

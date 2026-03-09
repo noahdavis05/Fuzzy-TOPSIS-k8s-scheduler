@@ -2,6 +2,7 @@ package algorithm
 
 import (
 	"fmt"
+	"scheduler/pkg/dashboard"
 	"scheduler/pkg/types"
 	"testing"
 
@@ -424,8 +425,9 @@ func TestTOPSISRankings(t *testing.T) {
 			fuzzyDM.Data = tc.decisionMatrix
 			FilterNodes(&fuzzyDM, podRequest, clusterLimits)
 
-			// now run the node selection
-			outputNodeName := selectNode(fuzzyDM, false)
+			// now run the node selection#
+			dash := dashboard.PodScheduledMessage{}
+			outputNodeName := selectNode(fuzzyDM, &dash, false)
 			assert.Equal(t, outputNodeName, tc.expectedNodeName)
 
 			if outputNodeName == tc.expectedNodeName {
